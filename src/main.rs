@@ -62,6 +62,12 @@ struct Cli {
     /// Yandex GPT: ключ — IAM-токен (Bearer) вместо API-ключа
     #[arg(long)]
     iam_token: bool,
+
+    /// Не проверять TLS-сертификат (нужно для GigaChat: его корневые
+    /// сертификаты отсутствуют в стандартных хранилищах) — только для
+    /// доверенной сети!
+    #[arg(long)]
+    insecure: bool,
 }
 
 #[tokio::main]
@@ -79,6 +85,7 @@ async fn main() -> Result<()> {
         cli.folder_id.as_deref(),
         cli.iam_token,
         cli.max_tokens,
+        cli.insecure,
     )
     .context("не удалось собрать конфигурацию")?;
 

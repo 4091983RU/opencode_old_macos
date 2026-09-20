@@ -77,7 +77,7 @@ impl Provider {
             Self::Openai => "https://api.openai.com/v1",
             Self::Qwen => "https://dashscope.aliyuncs.com/compatible-mode/v1",
             Self::Zen => "https://opencode.ai/zen/v1",
-            Self::Gigachat => "https://gigachat.devices.sberbank.ru/api/v1",
+            Self::Gigachat => "https://api.giga.chat/v1",
             Self::Yandexgpt => "https://llm.api.cloud.yandex.net/foundationModels",
         }
     }

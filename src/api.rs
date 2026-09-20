@@ -16,7 +16,13 @@ use crate::provider::Provider;
 
 /// Единый вход: отправить промпт выбранному провайдеру, вернуть текст ответа.
 pub async fn chat(cfg: &Config, prompt: &str) -> Result<String> {
-    let client = reqwest::Client::builder()
+    let mut builder = reqwest::Client::builder();
+    if cfg.insecure_tls {
+        // GigaChat использует корневые сертификаты, которых нет в стандартных
+        // хранилищах (rustls/webpki); запросы к нему без этого падают на TLS.
+        builder = builder.danger_accept_invalid_certs(true);
+    }
+    let client = builder
         .build()
         .context("не удалось создать HTTP-клиент")?;
 

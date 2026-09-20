@@ -31,6 +31,9 @@ pub struct Config {
     pub folder_id: Option<String>,
     /// Yandex GPT: передавать ключ как IAM-токен (Bearer) вместо API-ключа.
     pub iam_token: bool,
+    /// Не проверять сертификат сервера (для провайдеров с «нестандартными»
+    /// корнями, например GigaChat). Включается флагом `--insecure`.
+    pub insecure_tls: bool,
 }
 
 impl Config {
@@ -46,6 +49,7 @@ impl Config {
         folder_id: Option<&str>,
         iam_token: bool,
         max_tokens: u32,
+        insecure_tls: bool,
     ) -> Result<Self> {
         if dotenvy::dotenv().is_err() {
             // .env не обязателен — работаем и без него.
@@ -60,6 +64,7 @@ impl Config {
             folder_id,
             iam_token,
             max_tokens,
+            insecure_tls,
             |name| std::env::var(name),
         )
     }
@@ -76,6 +81,7 @@ impl Config {
         folder_id: Option<&str>,
         iam_token: bool,
         max_tokens: u32,
+        insecure_tls: bool,
         lookup: impl Fn(&str) -> std::result::Result<String, std::env::VarError>,
     ) -> Result<Self> {
         let provider_name = match provider {
@@ -154,6 +160,7 @@ impl Config {
             client_secret,
             folder_id,
             iam_token,
+            insecure_tls,
         })
     }
 }
@@ -209,6 +216,7 @@ mod tests {
             None,
             false,
             2048,
+            false,
             no_env,
         )
         .unwrap();
@@ -220,15 +228,15 @@ mod tests {
 
     #[test]
     fn openai_requires_key() {
-        assert!(Config::resolve_as(None, None, None, None, None, None, None, false, 2048, no_env).is_err());
-        assert!(Config::resolve_as(Some("openai"), None, None, None, None, None, None, false, 2048, no_env)
+        assert!(Config::resolve_as(None, None, None, None, None, None, None, false, 2048, false, no_env).is_err());
+        assert!(Config::resolve_as(Some("openai"), None, None, None, None, None, None, false, 2048, false, no_env)
             .is_err());
     }
 
     #[test]
     fn qwen_reads_env_and_model() {
         let env = with(&[("DASHSCOPE_API_KEY", "k"), ("DASHSCOPE_MODEL", "qwen-max")]);
-        let cfg = Config::resolve_as(Some("qwen"), None, None, None, None, None, None, false, 2048, env).unwrap();
+        let cfg = Config::resolve_as(Some("qwen"), None, None, None, None, None, None, false, 2048, false, env).unwrap();
         assert_eq!(cfg.api_key.as_deref(), Some("k"));
         assert_eq!(cfg.model, "qwen-max");
     }
@@ -236,21 +244,21 @@ mod tests {
     #[test]
     fn zen_uses_opencode_key_env() {
         let env = with(&[("OPENCODE_API_KEY", "sk-zen")]);
-        let cfg = Config::resolve_as(Some("zen"), None, None, None, None, None, None, false, 2048, env).unwrap();
+        let cfg = Config::resolve_as(Some("zen"), None, None, None, None, None, None, false, 2048, false, env).unwrap();
         assert_eq!(cfg.api_key.as_deref(), Some("sk-zen"));
         assert_eq!(cfg.base_url, "https://opencode.ai/zen/v1");
     }
 
     #[test]
     fn gigachat_needs_client_credentials() {
-        assert!(Config::resolve_as(Some("gigachat"), None, None, None, None, None, None, false, 2048, no_env)
+        assert!(Config::resolve_as(Some("gigachat"), None, None, None, None, None, None, false, 2048, false, no_env)
             .is_err());
 
         let env = with(&[
             ("GIGACHAT_CLIENT_ID", "id"),
             ("GIGACHAT_CLIENT_SECRET", "secret"),
         ]);
-        let cfg = Config::resolve_as(Some("gigachat"), None, None, None, None, None, None, false, 2048, env).unwrap();
+        let cfg = Config::resolve_as(Some("gigachat"), None, None, None, None, None, None, false, 2048, false, env).unwrap();
         assert_eq!(cfg.client_id.as_deref(), Some("id"));
         assert_eq!(cfg.client_secret.as_deref(), Some("secret"));
         assert!(cfg.api_key.is_none());
@@ -258,20 +266,20 @@ mod tests {
 
     #[test]
     fn yandex_requires_folder_and_accepts_iam() {
-        assert!(Config::resolve_as(Some("yandexgpt"), None, None, None, None, None, None, false, 2048, no_env)
+        assert!(Config::resolve_as(Some("yandexgpt"), None, None, None, None, None, None, false, 2048, false, no_env)
             .is_err());
 
         let env = with(&[
             ("YANDEX_API_KEY", "av7"),
             ("YANDEX_FOLDER_ID", "b1g"),
         ]);
-        let cfg = Config::resolve_as(Some("yandexgpt"), None, None, None, None, None, Some("b1g"), false, 2048, env).unwrap();
+        let cfg = Config::resolve_as(Some("yandexgpt"), None, None, None, None, None, Some("b1g"), false, 2048, false, env).unwrap();
         assert_eq!(cfg.api_key.as_deref(), Some("av7"));
         assert!(!cfg.iam_token);
         assert_eq!(cfg.folder_id.as_deref(), Some("b1g"));
 
         let env = with(&[("YANDEX_IAM_TOKEN", "t0ken"), ("YANDEX_FOLDER_ID", "b1g")]);
-        let cfg = Config::resolve_as(Some("yandexgpt"), None, None, None, None, None, None, false, 2048, env).unwrap();
+        let cfg = Config::resolve_as(Some("yandexgpt"), None, None, None, None, None, None, false, 2048, false, env).unwrap();
         assert_eq!(cfg.api_key.as_deref(), Some("t0ken"));
         assert!(cfg.iam_token);
     }
@@ -289,6 +297,7 @@ mod tests {
             None,
             false,
             2048,
+            false,
             env,
         )
         .unwrap();
