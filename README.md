@@ -35,9 +35,14 @@ cargo run --provider qwen -- "привет"
 | ------------ | --------------------------------------------- | ------------------------------------ | ------------------- |
 | `openai`     | `OPENAI_API_KEY`                              | `https://api.openai.com/v1`          | `gpt-4o-mini`       |
 | `qwen`       | `DASHSCOPE_API_KEY`                           | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
-| `zen`        | `OPENCODE_API_KEY`                            | `https://opencode.ai/zen/v1`         | `mimo-v2.5-free`    |
+| `zen`        | `OPENCODE_API_KEY`                            | `https://opencode.ai/zen/v1`         | `big-pickle`        |
 | `gigachat`   | `GIGACHAT_CLIENT_ID` + `GIGACHAT_CLIENT_SECRET` | `https://gigachat.devices.sberbank.ru/api/v1` | `GigaChat-Max` |
 | `yandexgpt`  | `YANDEX_API_KEY` (или `YANDEX_IAM_TOKEN`) + `YANDEX_FOLDER_ID` | `https://llm.api.cloud.yandex.net/foundationModels` | `yandexgpt/latest` |
+
+> Примечание по `zen`: гейтвей OpenCode Zen отдаёт free-модели только официальному
+> клиенту opencode (проверка не по заголовкам, поэтому библиотекой её не обойти).
+> Провайдер оставлен для совместимости конфигов; для свободного доступа без
+> официального клиента используйте `gigachat` (бесплатно для личных проектов).
 
 Все параметры можно передать аргументами: `--base-url`, `--api-key`, `--model`,
 а также `--client-id`/`--client-secret` (GigaChat), `--folder-id`/`--iam-token`
