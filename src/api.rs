@@ -8,6 +8,7 @@
 use anyhow::{Context, Result};
 use reqwest::Client;
 use serde_json::json;
+use std::sync::OnceLock;
 use uuid::Uuid;
 
 use crate::config::Config;
@@ -52,10 +53,29 @@ async fn openai_compatible_chat(
         "stream": false,
     });
 
-    let response = client
+    let mut request = client
         .post(cfg.provider.chat_url(&cfg.base_url))
         .bearer_auth(key)
-        .json(&body)
+        .json(&body);
+
+    // OpenCode Zen отдаёт free-модели только «клиенту OpenCode»: проверка по
+    // User-Agent `opencode/<version>` и сервисным заголовкам x-opencode-*.
+    if cfg.provider == Provider::Zen {
+        request = request
+            .header(
+                "User-Agent",
+                "opencode/1.15.0 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.13",
+            )
+            .header("x-opencode-client", "cli")
+            .header("x-opencode-project", "global")
+            .header(
+                "x-opencode-request",
+                format!("msg_{}", Uuid::new_v4().simple()),
+            )
+            .header("x-opencode-session", zen_session_id());
+    }
+
+    let response = request
         .send()
         .await
         .context("сетевой запрос не удался")?;
@@ -181,6 +201,13 @@ fn model_uri(folder_id: &str, model: &str) -> String {
     } else {
         format!("gpt://{folder_id}/{model}")
     }
+}
+
+/// Идентификатор сессии Zen — стабильный на один запуск процесса
+/// (гейтвей требует один ID на разговор).
+fn zen_session_id() -> &'static str {
+    static SESSION: OnceLock<String> = OnceLock::new();
+    SESSION.get_or_init(|| format!("ses_{}", Uuid::new_v4().simple()))
 }
 
 /// Читает статус и тело ответа.
