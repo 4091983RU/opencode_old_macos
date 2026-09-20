@@ -49,17 +49,59 @@ OpenAI-совместимый (`openai`) работает с любым совм
 
 Поддерживается `.env` через `dotenvy`.
 
-## Сборка для старых macOS
+## Установка и обновление (рекомендуется)
+
+Бинарник для мака сестры собирает **GitHub Actions** (нужен macOS-раннер), а на
+gitverse таких раннеров нет. Поэтому канонический репозиторий — gitverse, а на
+GitHub он автоматически зеркалируется, где и срабатывает CI.
+
+1. Пуш в gitverse (ветка `master`). gitverse-CI (`sync-to-github` в
+   `.gitverse/workflows/sync-to-github.yml`) синхронизирует коммит на GitHub-зеркало.
+   Нужны секреты `GITHUBTOKEN` и `GITHUBMIRRORREPO` (`4091983RU/opencode_old_macos`)
+   в Настройки → Секреты и переменные гитверса (подчёркивания gitverse не
+   принимает), а в настройках CI/CD репозитория выбрано «Использовать конфигурацию
+   из .gitverse/workflows».
+2. GitHub Actions собирает артефакт `opencode_old_macos-darwin-x64` и проверяет
+   minOS ≤ 10.13 (`script/check-minos.sh`).
+3. Во вкладке **Actions** последнего прогона скачай артефакт
+   `opencode_old_macos-darwin-x64`.
+4. На маке сестры (Rust не нужен):
+
+   ```bash
+   unzip opencode_old_macos-darwin-x64.zip
+   chmod +x opencode_old_macos            # артефакт может терять бит исполнения
+   xattr -dr com.apple.quarantine opencode_old_macos   # если Gatekeeper ругается
+   export OPENAI_API_KEY="sk-..."         # или другой провайдер, см. ниже
+   ./opencode_old_macos "привет"
+   ```
+
+**Обновление** — повтор той же процедуры: пуш в gitverse → свежий артефакт в
+GitHub Actions → заменил бинарник на маке. Это единый скомпилированный бинарник,
+поэтому каждая новая версия = пересборка (её делает CI, а не мак).
+
+## Сборка из исходников (по необходимости)
+
+Обычно исходники собирать не нужно — берите артефакт из CI (см. выше).
+
+Локальная сборка требует macOS и Xcode Command Line Tools (rustc на x86_64
+поддерживает macOS 10.12+):
 
 ```bash
+# на Intel-маке x86_64-apple-darwin — это родной host-таргет, `target add` не нужен;
+# при кросс-сборке с другой машины выполните:
 rustup target add x86_64-apple-darwin
+
 MACOSX_DEPLOYMENT_TARGET=10.9 cargo build --release --target x86_64-apple-darwin
+# minOS задан в .cargo/config.toml; переменная нужна, только если его переопределить;
 # проверить минимальную версию бинарника:
 bash script/check-minos.sh target/x86_64-apple-darwin/release/opencode_old_macos
 ```
 
-CI (GitHub Actions) собирает `darwin-x64`, проверяет minOS и публикует артефакт.
-Подробнее — [ARCHITECTURE.md](ARCHITECTURE.md).
+На самом MacBookPro8,3 такая сборка возможна, но медленная (компиляция
+`ring`/`rustls`/`tokio` на железе 2011 года) — предпочтительнее артефакт из CI.
+
+CI (GitHub Actions на GitHub-зеркале) собирает `darwin-x64`, проверяет minOS и
+публикует артефакт. Подробнее — [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Лицензия
 

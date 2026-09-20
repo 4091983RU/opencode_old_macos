@@ -1,0 +1,30 @@
+# Синхронизация master на GitHub-зеркало.
+#
+# Канонический репозиторий — gitverse. На gitverse нет macOS-раннеров (только
+# ubuntu-latest), поэтому darwin-x64 собирает GitHub Actions на зеркале.
+# Этот workflow на каждом пуше в master форсит пуш текущего коммита на GitHub.
+#
+# Нужные секреты (Настройки → Секреты и переменные):
+#   GITHUBTOKEN           — GitHub PAT (classic/scope repo или fine-grained Contents: Read and write)
+#   GITHUBMIRRORREPO      — "OWNER/opencode_old_macos", например 4091983RU/opencode_old_macos
+# (имена без нижних подчёркиваний, т.к. gitverse их не принимает)
+
+name: Sync to GitHub mirror
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Push to GitHub mirror
+        env:
+          GH_TOKEN: ${{ secrets.GITHUBTOKEN }}
+          MIRROR_REPO: ${{ secrets.GITHUBMIRRORREPO }}
+        run: |
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${MIRROR_REPO}.git" "HEAD:refs/heads/master"
