@@ -1,7 +1,8 @@
 # opencode_old_macos
 
 Тонкий AI-агент (CLI) для работы на **старых macOS** (High Sierra 10.13 и ранее, Intel).
-OpenAI-совместимые API. Единственная рантайм-зависимость — собственный Rust-бинарник:
+Поддерживаются провайдеры: OpenAI-совместимые (openai/qwen/zen), GigaChat, Yandex GPT.
+Единственная рантайм-зависимость — собственный Rust-бинарник:
 никаких Bun/Node/Electron, TLS — собственный (rustls).
 
 ## Зачем это
@@ -18,22 +19,33 @@ OpenAI-совместимые API. Единственная рантайм-за�
 ## Быстрый старт
 
 ```bash
-export OPENAI_BASE_URL="https://api.openai.com/v1"   # или любой совместимый: vLLM, Ollama, гейтвей
-export OPENAI_API_KEY="sk-..."
-export OPENAI_MODEL="gpt-4o-mini"
+export OPENAI_API_KEY="sk-..."   # свой ключ OpenAI
 
 cargo run -- "объясни, почему список Temu нельзя суммировать"
+# или с провайдером:
+cargo run --provider qwen -- "привет"
 ```
 
-Все три параметра можно передать аргументами: `--base-url`, `--api-key`, `--model`.
+## Провайдеры
+
+Провайдер выбирается `--provider` / `PROVIDER`. Переменные окружения зависят от
+провайдера (`<PREFIX>_BASE_URL`, `<PREFIX>_MODEL`, ключ — см. таблицу).
+
+| Провайдер    | Ключ (env)                                    | Base URL по умолчанию                | Модель по умолчанию |
+| ------------ | --------------------------------------------- | ------------------------------------ | ------------------- |
+| `openai`     | `OPENAI_API_KEY`                              | `https://api.openai.com/v1`          | `gpt-4o-mini`       |
+| `qwen`       | `DASHSCOPE_API_KEY`                           | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
+| `zen`        | `OPENCODE_API_KEY`                            | `https://opencode.ai/zen/v1`         | `mimo-v2.5-free`    |
+| `gigachat`   | `GIGACHAT_CLIENT_ID` + `GIGACHAT_CLIENT_SECRET` | `https://gigachat.devices.sberbank.ru/api/v1` | `GigaChat-Max` |
+| `yandexgpt`  | `YANDEX_API_KEY` (или `YANDEX_IAM_TOKEN`) + `YANDEX_FOLDER_ID` | `https://llm.api.cloud.yandex.net/foundationModels` | `yandexgpt/latest` |
+
+Все параметры можно передать аргументами: `--base-url`, `--api-key`, `--model`,
+а также `--client-id`/`--client-secret` (GigaChat), `--folder-id`/`--iam-token`
+(Yandex GPT). Yandex GPT принимает полный modelUri: `--model "gpt://<folder>/<model>"`.
+
+OpenAI-совместимый (`openai`) работает с любым совместимым API: vLLM, Ollama, гейтвей.
 
 ## Конфигурация
-
-| Переменная            | Аргумент CLI    | По умолчанию                              |
-| --------------------- | --------------- | ----------------------------------------- |
-| `OPENAI_BASE_URL`     | `--base-url`    | `https://api.openai.com/v1`               |
-| `OPENAI_API_KEY`      | `--api-key`     | нет (обязателен)                          |
-| `OPENAI_MODEL`        | `--model`       | `gpt-4o-mini`                             |
 
 Поддерживается `.env` через `dotenvy`.
 
@@ -48,16 +60,6 @@ bash script/check-minos.sh target/x86_64-apple-darwin/release/opencode_old_macos
 
 CI (GitHub Actions) собирает `darwin-x64`, проверяет minOS и публикует артефакт.
 Подробнее — [ARCHITECTURE.md](ARCHITECTURE.md).
-
-## Роадмап (MVP на ~2 месяца)
-
-- **v0.1 / нед. 1–2** — CLI: промпт → ответ, конфиг, логирование через `tracing`.
-  (текущее состояние)
-- **нед. 3** — потоковый ответ (SSE), отмена по `Ctrl+C`, retry.
-- **нед. 4** — история/сессии в локальном JSON (`~/.config/opencode_old_macos/`).
-- **нед. 5–6** — инструменты: чтение/запись файлов, применение патчей, require-подтверждение.
-- **нед. 7–8** — простой TUI на `ratatui` (ANSI/stdio, работает на 10.13).
-- **дальше** — энтерпрайз-слой: доменная авторизация, политики, лимиты, аудит.
 
 ## Лицензия
 
