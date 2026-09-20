@@ -36,7 +36,7 @@ cargo run --provider qwen -- "привет"
 | `openai`     | `OPENAI_API_KEY`                              | `https://api.openai.com/v1`          | `gpt-4o-mini`       |
 | `qwen`       | `DASHSCOPE_API_KEY`                           | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` |
 | `zen`        | `OPENCODE_API_KEY`                            | `https://opencode.ai/zen/v1`         | `big-pickle`        |
-| `gigachat`   | `GIGACHAT_CLIENT_ID` + `GIGACHAT_CLIENT_SECRET` | `https://gigachat.devices.sberbank.ru/api/v1` | `GigaChat-Max` |
+| `gigachat`   | `GIGACHAT_API_KEY` (ключ авторизации) или `GIGACHAT_CLIENT_ID` + `GIGACHAT_CLIENT_SECRET` | `https://api.giga.chat/v1` | `GigaChat-2-Max` |
 | `yandexgpt`  | `YANDEX_API_KEY` (или `YANDEX_IAM_TOKEN`) + `YANDEX_FOLDER_ID` | `https://llm.api.cloud.yandex.net/foundationModels` | `yandexgpt/latest` |
 
 > Примечание по `zen`: гейтвей OpenCode Zen отдаёт free-модели только официальному
@@ -61,6 +61,38 @@ OpenAI-совместимый (`openai`) работает с любым совм
    - одним **ключом авторизации** (то, что показывает Studio одним полем,
      base64 от `client_id:client_secret`): `--api-key "YWVlMTkw…"`;
    - парой `--client-id "…" --client-secret "…"`.
+
+## Запуск без флагов (как `opencode`)
+
+Креды и настройки можно положить в файл `.env` (программа сама найдёт его в
+текущей папке и выше по дереву, например в домашней):
+
+```bash
+cat >> ~/.env <<'EOF'
+PROVIDER=gigachat
+GIGACHAT_API_KEY="YWVlMTkwMDYt…"        # или GIGACHAT_CLIENT_ID / GIGACHAT_CLIENT_SECRET
+OPCODE_INSECURE=1
+EOF
+```
+
+После этого:
+
+```bash
+opencode "объясни коротко, что такое Rust"   # разовый вопрос
+opencode                                       # интерактивный диалог (пустая строка — выход)
+echo "какой сегодня день?" | opencode          # ввод из пайпа = один запрос
+```
+
+Чтобы звать программу коротким именем из любого места, положите бинарник в папку
+из PATH и переименуйте (вариант — симлинк):
+
+```bash
+mkdir -p ~/bin
+mv opencode_old_macos ~/bin/opencode
+chmod +x ~/bin/opencode
+# чтобы ~/bin попал в PATH (текущая сессия):
+export PATH="$HOME/bin:$PATH"
+```
 
 ## Конфигурация
 

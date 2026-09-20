@@ -106,7 +106,7 @@ impl Config {
 
         // Секреты, специфичные для провайдера.
         let (api_key, iam_token) = match provider {
-            Provider::Gigachat => (cli_key, false),
+            Provider::Gigachat => (cli_key.or_else(|| env(&lookup, "GIGACHAT_API_KEY")), false),
             Provider::Openai | Provider::Qwen | Provider::Zen => {
                 let key = cli_key
                     .or_else(|| provider.key_env().and_then(|n| env(&lookup, n)))
@@ -156,6 +156,9 @@ impl Config {
             bail!("для yandexgpt нужен folder_id: --folder-id или YANDEX_FOLDER_ID");
         }
 
+        // Флаг --insecure можно включать и через окружение (удобно для .env).
+        let insecure_tls = insecure_tls || flag_env(&lookup, "OPCODE_INSECURE");
+
         Ok(Self {
             provider,
             base_url,
@@ -180,6 +183,16 @@ fn env(
         .ok()
         .map(|v| v.trim().to_string())
         .filter(|v| !v.is_empty())
+}
+
+/// Читает булевый флаг из окружения: 1/true/yes/on (без учёта регистра).
+fn flag_env(
+    lookup: &impl Fn(&str) -> std::result::Result<String, std::env::VarError>,
+    name: &str,
+) -> bool {
+    env(lookup, name)
+        .map(|v| matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+        .unwrap_or(false)
 }
 
 /// Подсказка, где взять ключ.
@@ -268,6 +281,48 @@ mod tests {
         assert_eq!(cfg.client_id.as_deref(), Some("id"));
         assert_eq!(cfg.client_secret.as_deref(), Some("secret"));
         assert!(cfg.api_key.is_none());
+
+        // Готовый ключ авторизации тоже можно взять из окружения.
+        let env = with(&[("GIGACHAT_API_KEY", "aWQ6c2VjcmV0")]);
+        let cfg = Config::resolve_as(Some("gigachat"), None, None, None, None, None, None, false, 2048, false, env).unwrap();
+        assert_eq!(cfg.api_key.as_deref(), Some("aWQ6c2VjcmV0"));
+        assert!(cfg.client_id.is_none());
+    }
+
+    #[test]
+    fn insecure_flag_from_env() {
+        let env = with(&[("OPCODE_INSECURE", "1")]);
+        let cfg = Config::resolve_as(
+            Some("openai"),
+            None,
+            Some("k"),
+            None,
+            None,
+            None,
+            None,
+            false,
+            2048,
+            false,
+            env,
+        )
+        .unwrap();
+        assert!(cfg.insecure_tls);
+
+        let cfg = Config::resolve_as(
+            Some("openai"),
+            None,
+            Some("k"),
+            None,
+            None,
+            None,
+            None,
+            false,
+            2048,
+            false,
+            no_env,
+        )
+        .unwrap();
+        assert!(!cfg.insecure_tls);
     }
 
     #[test]

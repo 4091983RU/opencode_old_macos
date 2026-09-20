@@ -13,6 +13,7 @@ mod provider;
 
 use anyhow::{Context, Result};
 use clap::Parser;
+use std::io::{BufRead, IsTerminal, Write};
 
 use crate::config::Config;
 
@@ -24,8 +25,10 @@ use crate::config::Config;
     about = "Тонкий AI-агент для старых macOS (несколько провайдеров: openai, qwen, zen, gigachat, yandexgpt)"
 )]
 struct Cli {
-    /// Промпт (запрос к модели)
-    prompt: String,
+    /// Промпт (запрос к модели). Если не задан и stdin — терминал,
+    /// запускается интерактивный режим диалога; если stdin — не терминал,
+    /// весь ввод читается как один промпт.
+    prompt: Option<String>,
 
     /// Провайдер: openai, qwen, zen, gigachat, yandexgpt
     #[arg(long, default_value = "openai")]
@@ -97,11 +100,58 @@ async fn main() -> Result<()> {
         "выполняется запрос"
     );
 
-    let text = api::chat(&cfg, &cli.prompt)
-        .await
-        .context("запрос к модели не удался")?;
+    match cli.prompt {
+        Some(prompt) => {
+            let text = api::chat(&cfg, &prompt)
+                .await
+                .context("запрос к модели не удался")?;
+            println!("{text}");
+        }
+        None if std::io::stdin().is_terminal() => {
+            interactive(&cfg).await?;
+        }
+        None => {
+            // stdin — не терминал: читаем весь ввод как один промпт.
+            let mut lines = String::new();
+            for line in std::io::stdin().lock().lines() {
+                lines.push_str(&line.map_err(anyhow::Error::from)?);
+                lines.push('\n');
+            }
+            let text = api::chat(&cfg, lines.trim())
+                .await
+                .context("запрос к модели не удался")?;
+            println!("{text}");
+        }
+    }
 
-    println!("{text}");
+    Ok(())
+}
+
+/// Интерактивный диалог: читает вопросы из stdin, печатает ответы модели.
+async fn interactive(cfg: &Config) -> Result<()> {
+    println!(
+        "Интерактивный режим ({} / {}). Вопрос — ответ; пустая строка — выход.",
+        cfg.provider.name(),
+        cfg.base_url
+    );
+    let stdin = std::io::stdin();
+    let mut out = std::io::stdout();
+    loop {
+        out.write_all(b"> ").ok();
+        out.flush().ok();
+        let mut line = String::new();
+        if stdin.lock().read_line(&mut line).ok().filter(|n| *n > 0).is_none() {
+            break; // Ctrl+D
+        }
+        let prompt = line.trim();
+        if prompt.is_empty() {
+            break;
+        }
+        match api::chat(cfg, prompt).await {
+            Ok(text) => println!("\n{}\n", text),
+            Err(e) => eprintln!("ошибка: {e:#}"),
+        }
+    }
     Ok(())
 }
 
