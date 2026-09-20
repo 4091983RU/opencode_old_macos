@@ -30,9 +30,10 @@ struct Cli {
     /// весь ввод читается как один промпт.
     prompt: Option<String>,
 
-    /// Провайдер: openai, qwen, zen, gigachat, yandexgpt
-    #[arg(long, default_value = "openai")]
-    provider: String,
+    /// Провайдер: openai, qwen, zen, gigachat, yandexgpt.
+    /// Если не задан, берётся из переменной PROVIDER (в т.ч. из .env), иначе — openai.
+    #[arg(long)]
+    provider: Option<String>,
 
     /// Base URL провайдера (переопределяет стандартный адрес)
     #[arg(long)]
@@ -80,7 +81,7 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
     let cfg = Config::load(
-        Some(&cli.provider),
+        cli.provider.as_deref(),
         cli.base_url.as_deref(),
         cli.api_key.as_deref(),
         cli.model.as_deref(),

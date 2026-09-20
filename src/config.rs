@@ -290,6 +290,18 @@ mod tests {
     }
 
     #[test]
+    fn provider_from_env_overrides_default() {
+        let env = with(&[
+            ("PROVIDER", "gigachat"),
+            ("GIGACHAT_API_KEY", "aWQ6c2VjcmV0"),
+        ]);
+        let cfg = Config::resolve_as(None, None, None, None, None, None, None, false, 2048, false, env)
+            .unwrap();
+        assert_eq!(cfg.provider, Provider::Gigachat);
+        assert_eq!(cfg.api_key.as_deref(), Some("aWQ6c2VjcmV0"));
+    }
+
+    #[test]
     fn insecure_flag_from_env() {
         let env = with(&[("OPCODE_INSECURE", "1")]);
         let cfg = Config::resolve_as(
