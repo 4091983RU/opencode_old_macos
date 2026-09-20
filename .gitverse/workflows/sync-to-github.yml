@@ -29,4 +29,5 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUBTOKEN }}
           MIRROR_REPO: ${{ secrets.GITHUBMIRRORREPO }}
         run: |
+          git fetch --unshallow || true
           git push --force "https://x-access-token:${GH_TOKEN}@github.com/${MIRROR_REPO}.git" "HEAD:refs/heads/master"
