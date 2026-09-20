@@ -15,13 +15,18 @@ if [[ ! -x "$BIN" ]]; then
   exit 1
 fi
 
-# otool -l выводит блок вида:
-#   cmd LC_BUILD_VERSION / LC_VERSION_MIN_MACOSX
-#   ...
-#   minos 10.9.0
-minos="$(otool -l "$BIN" | awk '$1 == "minos" { print $2; exit }')"
+# otool печатает minimum OS двумя способами — в зависимости от того, какой
+# load command эмитировал линкер:
+#   - современный LC_BUILD_VERSION      -> поле "minos  10.9"
+#   - устаревший LC_VERSION_MIN_MACOSX  -> поле "version 10.9"
+# Ищем значение внутри соответствующего блока load command.
+minos="$(otool -l "$BIN" | awk '
+  $1 == "cmd" { want = ($2 ~ /LC_BUILD_VERSION|LC_VERSION_MIN_MACOSX/); next }
+  want && ($1 == "minos" || $1 == "version") { print $2; exit }
+')"
 if [[ -z "$minos" ]]; then
-  echo "minos not found in $BIN — не Mach-O?" >&2
+  echo "minos/version not found in $BIN — не Mach-O?" >&2
+  otool -l "$BIN" | sed -n '1,40p' >&2 || true
   exit 1
 fi
 
