@@ -88,7 +88,7 @@ impl Provider {
             Self::Openai => "gpt-4o-mini",
             Self::Qwen => "qwen-plus",
             Self::Zen => "mimo-v2.5-free",
-            Self::Gigachat => "GigaChat-Max",
+            Self::Gigachat => "GigaChat-2-Max",
             Self::Yandexgpt => "yandexgpt/latest",
         }
     }

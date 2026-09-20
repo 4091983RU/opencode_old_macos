@@ -35,7 +35,8 @@ struct Cli {
     #[arg(long)]
     base_url: Option<String>,
 
-    /// API-ключ (у GigaChat вместо него используются --client-id/--client-secret)
+    /// API-ключ (у GigaChat это готовый ключ авторизации: base64 от client_id:client_secret,
+    /// вместо --client-id/--client-secret; у остальных провайдеров — их ключ)
     #[arg(long)]
     api_key: Option<String>,
 

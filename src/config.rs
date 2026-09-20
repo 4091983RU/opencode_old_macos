@@ -106,7 +106,7 @@ impl Config {
 
         // Секреты, специфичные для провайдера.
         let (api_key, iam_token) = match provider {
-            Provider::Gigachat => (None, false),
+            Provider::Gigachat => (cli_key, false),
             Provider::Openai | Provider::Qwen | Provider::Zen => {
                 let key = cli_key
                     .or_else(|| provider.key_env().and_then(|n| env(&lookup, n)))
@@ -138,8 +138,14 @@ impl Config {
             .map(ToString::to_string)
             .or_else(|| env(&lookup, "GIGACHAT_CLIENT_SECRET"))
             .filter(|_| provider == Provider::Gigachat);
-        if provider == Provider::Gigachat && (client_id.is_none() || client_secret.is_none()) {
-            bail!("для gigachat нужны client_id и client_secret: --client-id/--client-secret или GIGACHAT_CLIENT_ID/GIGACHAT_CLIENT_SECRET");
+        if provider == Provider::Gigachat
+            && api_key.is_none()
+            && (client_id.is_none() || client_secret.is_none())
+        {
+            bail!(
+                "для gigachat нужен ключ авторизации --api-key или пара --client-id/--client-secret \
+                 (либо GIGACHAT_CLIENT_ID/GIGACHAT_CLIENT_SECRET)"
+            );
         }
 
         let folder_id = folder_id

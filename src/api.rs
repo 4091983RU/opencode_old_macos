@@ -5,7 +5,7 @@
 //! использует нативную схему `/foundationModels/v1/completion`.
 //! Только не потоковый режим: полный ответ за один запрос.
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use reqwest::Client;
 use serde_json::json;
 use std::sync::OnceLock;
@@ -104,23 +104,26 @@ async fn openai_compatible_chat(
 
 /// GigaChat: обмен client credentials на токен доступа (OAuth2, scope=GIGACHAT_API_PERS).
 async fn gigachat_access_token(client: &Client, cfg: &Config) -> Result<String> {
-    let client_id = cfg
-        .client_id
-        .as_deref()
-        .context("не задан GigaChat client_id")?;
-    let client_secret = cfg
-        .client_secret
-        .as_deref()
-        .context("не задан GigaChat client_secret")?;
-
     let rquid = Uuid::new_v4().to_string();
 
-    let response = client
+    // Вместо пары client_id/client_secret можно передать готовый ключ
+    // авторизации (base64 от client_id:client_secret) через --api-key —
+    // ровно как в официальном SDK GigaChat.
+    let request = client
         .post("https://ngw.devices.sberbank.ru:9443/api/v2/oauth")
-        .basic_auth(client_id, Some(client_secret))
         .header("RqUID", &rquid)
         .header("Content-Type", "application/x-www-form-urlencoded")
-        .body("scope=GIGACHAT_API_PERS")
+        .body("scope=GIGACHAT_API_PERS");
+    let request = match (&cfg.api_key, &cfg.client_id, &cfg.client_secret) {
+        (Some(key), _, _) => request.header(
+            "Authorization",
+            format!("Basic {}", key.trim()),
+        ),
+        (None, Some(id), Some(secret)) => request.basic_auth(id, Some(secret)),
+        _ => bail!("для gigachat нужен --api-key (ключ авторизации) или --client-id/--client-secret"),
+    };
+
+    let response = request
         .send()
         .await
         .context("сетевой запрос токена GigaChat не удался")?;
