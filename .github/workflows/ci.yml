@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check-linux:
+    name: Build & test (linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - name: Build
+        run: cargo build --all-targets
+      - name: Test
+        run: cargo test
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  build-macos-x64:
+    name: Darwin x86_64 + minOS check
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin
+      - name: Build release (x86_64-apple-darwin)
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "10.9"
+        run: cargo build --release --target x86_64-apple-darwin
+      - name: Check minimum macOS (≤ 10.13)
+        run: bash script/check-minos.sh target/x86_64-apple-darwin/release/opencode_old_macos 10 13
+      - name: Upload darwin-x64 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode_old_macos-darwin-x64
+          path: target/x86_64-apple-darwin/release/opencode_old_macos

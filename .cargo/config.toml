@@ -1,0 +1,4 @@
+[env]
+# Минимальная macOS для бинарника (проверяется в CI: script/check-minos.sh).
+# 10.9 — запас под High Sierra (10.13) сестринского MacBookPro8,3.
+MACOSX_DEPLOYMENT_TARGET = "10.9"

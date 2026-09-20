@@ -1,0 +1,23 @@
+[package]
+name = "opencode_old_macos"
+version = "0.1.0"
+edition = "2021"
+description = "Тонкий AI-агент (CLI) для работы на старых macOS (10.13 и ранее). OpenAI-совместимые API."
+license = "MIT"
+rust-version = "1.75"
+
+[dependencies]
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env", "wrap_help"] }
+dotenvy = "0.15"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "charset", "http2"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
